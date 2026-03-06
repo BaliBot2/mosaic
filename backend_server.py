@@ -7,6 +7,9 @@ from typing import List, Optional
 from dotenv import load_dotenv
 import os, json, re, fitz
 
+print("Working dir:", os.getcwd())
+print("Files:", os.listdir())
+
 load_dotenv()
 
 app = Flask(__name__)
@@ -66,6 +69,7 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 def init_files():
+    print("INFO: Initializing files...")
     for f in [SUBMISSIONS_FILE, SCORED_FILE]:
         if not os.path.exists(f) or os.path.getsize(f) == 0:
             with open(f, 'w') as file:
@@ -79,15 +83,34 @@ init_files()
 # --- Processing Pipeline ---
 
 def extract_text(pdf_path):
-    doc = fitz.open(pdf_path)
-    text = ""
-    for page in doc:
-        text += page.get_text("text", sort=True) + "\n\n"
-    text = re.sub(r'\s{3,}', '  ', text)
-    text = re.sub(r'\n\s*\n', '\n', text)
-    return text.strip()
+    print(f"INFO: Extracting text from {pdf_path}")
+    try:
+        print(f"DEBUG: Does file exist? {os.path.exists(pdf_path)}")
+        if os.path.exists(pdf_path):
+            print(f"DEBUG: File size: {os.path.getsize(pdf_path)} bytes")
+            
+        doc = fitz.open(pdf_path)
+        print(f"DEBUG: PDF opened successfully. Number of pages: {len(doc)}")
+        
+        text = ""
+        for i, page in enumerate(doc):
+            page_text = page.get_text("text", sort=True)
+            print(f"DEBUG: Extracted {len(page_text)} chars from page {i+1}")
+            text += page_text + "\n\n"
+            
+        text = re.sub(r'\s{3,}', '  ', text)
+        text = re.sub(r'\n\s*\n', '\n', text)
+        print(f"DEBUG: Total extracted text length: {len(text)}")
+        return text.strip()
+    except Exception as e:
+        print(f"ERROR: Failed to extract text from '{pdf_path}'")
+        print(f"ERROR DETAILS: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise e
 
 def structure_jd(text):
+    print("INFO: Structuring JD text...")
     prompt = f"Extract structured data from this Job Description:\n\n{text}"
     response = client.models.generate_content(
         model='gemini-2.0-flash',
@@ -101,6 +124,7 @@ def structure_jd(text):
     return response.parsed
 
 def generate_assessment(jd_data, company_name):
+    print(f"INFO: Generating assessment for company {company_name}")
     prompt = f"""
     Create a tailored assessment for the following Job Description.
     Role: {jd_data.role}
@@ -122,6 +146,7 @@ def generate_assessment(jd_data, company_name):
     return response.parsed
 
 def score_candidate(submission, assessments):
+    print(f"INFO: Scoring candidate {submission.get('candidate_name', 'Unknown')}")
     jd_key = submission['jd_file']
     if jd_key not in assessments:
         raise ValueError(f"No assessment data for {jd_key}")
@@ -189,6 +214,7 @@ def leaderboard_data():
 @app.route('/upload-jd', methods=['POST'])
 def upload_jd():
     try:
+        print("INFO: Received request to upload JD...")
         if 'file' not in request.files:
             return jsonify({"error": "No file part"}), 400
         file = request.files['file']
@@ -200,12 +226,15 @@ def upload_jd():
         file.save(filepath)
         
         # 1. Extract
+        print(f"INFO: Step 1 - Extracting text from {filepath}")
         text = extract_text(filepath)
         
         # 2. Structure
+        print("INFO: Step 2 - Structuring JD...")
         jd_data = structure_jd(text)
         
         # 3. Generate
+        print("INFO: Step 3 - Generating assessment based on JD...")
         company_name = filename.split('_')[0] if '_' in filename else "Unknown"
         assessment = generate_assessment(jd_data, company_name)
         
@@ -232,6 +261,7 @@ def upload_jd():
 @app.route('/submit', methods=['POST'])
 def submit():
     try:
+        print("INFO: Received candidate submission...")
         data = request.json
         if not data:
             return jsonify({"error": "No data received"}), 400
