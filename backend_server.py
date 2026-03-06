@@ -158,9 +158,17 @@ def index():
 def static_files(path):
     return send_from_directory('.', path)
 
-@app.route('/leaderboard')
-def leaderboard():
-    return send_from_directory('.', 'leaderboard.html')
+@app.route('/admin')
+def admin_dashboard():
+    return send_from_directory('.', 'admin.html')
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+@app.route('/assessments.json')
+def get_assessments():
+    return send_from_directory('.', ASSESSMENTS_FILE)
 
 @app.route('/leaderboard-data')
 def leaderboard_data():

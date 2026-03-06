@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mosaic Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <style>
+        /* Admin specific styles overriding container */
+        body { align-items: flex-start; padding: 40px 20px; }
+        .container { max-width: 1200px; width: 100%; }
+        
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 32px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 32px;
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 16px;
+        }
+
+        .tab-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover { background: rgba(255,255,255,0.05); }
+        .tab-btn.active {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+
+        /* Dual Pane Layout */
+        .dual-pane {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            min-height: 600px;
+        }
+
+        .pane {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .pane-header {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: var(--accent-purple);
+            border-bottom: 1px solid var(--glass-border);
+            padding-bottom: 12px;
+        }
+
+        .jd-list-item {
+            padding: 16px;
+            border-bottom: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .jd-list-item:hover { background: rgba(255,255,255,0.05); }
+        .jd-list-item.active { background: rgba(56, 189, 248, 0.1); border-left: 4px solid var(--accent-blue); }
+
+        .question-card {
+            background: rgba(0,0,0,0.2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 1px solid var(--glass-border);
+        }
+        
+        .pdf-viewer {
+            width: 100%;
+            height: 500px;
+            border: none;
+            border-radius: 12px;
+            background: white;
+        }
+
+        /* Leaderboard table styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 16px;
+        }
+        th, td {
+            text-align: left;
+            padding: 16px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        th { color: var(--text-secondary); font-weight: 600; text-transform: uppercase; font-size: 0.85rem; }
+        .score-badge {
+            background: rgba(56, 189, 248, 0.1);
+            color: var(--accent-blue);
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-weight: 800;
+        }
+        
+        .rec-advance { color: var(--success); font-weight: 700; }
+        .rec-hold { color: #facc15; font-weight: 700; }
+        .rec-reject { color: #ef4444; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <div class="container glass-card fade-in">
+        <div class="admin-header">
+            <h1 style="margin: 0; text-align: left;">Admin Dashboard</h1>
+            <button onclick="window.location.href='/'" class="btn" style="width: auto; padding: 10px 20px; background: transparent; border: 1px solid var(--glass-border); color: var(--text-primary);">Back to Portal</button>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" id="tab-jds" onclick="switchTab('jds')">JDs & Assessments</button>
+            <button class="tab-btn" id="tab-leaderboard" onclick="switchTab('leaderboard')">Candidate Leaderboard</button>
+        </div>
+
+        <!-- JDs View -->
+        <div id="view-jds" class="dual-pane">
+            <!-- Left Pane: PDF List & Viewer -->
+            <div class="pane">
+                <div class="pane-header">Uploaded Job Descriptions</div>
+                <div style="margin-bottom: 16px;">
+                    <select id="admin-jd-select" style="margin-bottom: 16px;">
+                        <option value="" disabled selected>Loading JDs...</option>
+                    </select>
+                </div>
+                <!-- PDF Viewer -->
+                <div id="pdf-container" class="hidden">
+                    <iframe id="pdf-frame" class="pdf-viewer"></iframe>
+                </div>
+                <div id="no-jd-selected" style="text-align: center; color: var(--text-secondary); margin-top: 40px;">
+                    Select a JD to view the PDF and assessment criteria.
+                </div>
+            </div>
+
+            <!-- Right Pane: Assessment Details -->
+            <div class="pane">
+                <div class="pane-header">AI Auto-Generated Assessment</div>
+                <div id="assessment-details" class="hidden" style="overflow-y: auto;">
+                    <h3 id="assess-role" style="color: var(--accent-blue); margin-bottom: 16px;">Role</h3>
+                    <div id="questions-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard View -->
+        <div id="view-leaderboard" class="hidden">
+            <div class="pane" style="width: 100%;">
+                <div class="pane-header">Candidate Rankings</div>
+                <div style="overflow-x: auto;">
+                    <table id="leaderboard-table">
+                        <thead>
+                            <tr>
+                                <th>Candidate</th>
+                                <th>Role</th>
+                                <th>Score</th>
+                                <th>Recommendation</th>
+                                <th>Top Strengths</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <p id="no-data-msg" class="subtitle hidden" style="margin-top: 40px;">No candidates have completed assessments yet.</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
