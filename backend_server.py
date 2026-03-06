@@ -57,7 +57,7 @@ class AssessmentQuestion(BaseModel):
 class JDAssessment(BaseModel):
     role: str
     company: str
-    assessment_questions: list[AssessmentQuestion]
+    assessment_questions: list[dict] = Field(description="A list of objects, each containing a 'scenario', 'question', 'evaluation_criteria', and 'ideal_approach'.")
 
 # --- Files & Folders ---
 SUBMISSIONS_FILE = 'submissions.json'
@@ -133,17 +133,40 @@ def generate_assessment(jd_data, company_name):
     Responsibilities: {', '.join(jd_data.key_responsibilities)}
     
     Instruction: Generate 3 scenario-based questions testing judgment and strategy.
+    
+    You must return a valid JSON object with the following exact structure and keys:
+    {{
+        "role": "string",
+        "company": "string",
+        "assessment_questions": [
+            {{
+                "scenario": "string",
+                "question": "string",
+                "evaluation_criteria": "string",
+                "ideal_approach": "string"
+            }}
+        ]
+    }}
     """
     response = client.models.generate_content(
         model='gemini-2.0-flash',
         contents=prompt,
         config=types.GenerateContentConfig(
             response_mime_type="application/json",
-            response_schema=JDAssessment,
             temperature=0.4
         )
     )
-    return response.parsed
+    
+    # Parse the returned JSON text string into a Python dict safely
+    text = response.text
+    if text.startswith("```json"):
+        text = text[7:-3]
+    elif text.startswith("```"):
+        text = text[3:-3]
+        
+    parsed_json = json.loads(text.strip())
+    # Return as a JDAssessment model so the rest of the app doesn't break
+    return JDAssessment(**parsed_json)
 
 def score_candidate(submission, assessments):
     print(f"INFO: Scoring candidate {submission.get('candidate_name', 'Unknown')}")

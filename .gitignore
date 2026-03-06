@@ -4,6 +4,10 @@
 # Data folders (Large/Local content)
 data/
 uploads/
+!data/pdfs/
+!data/**/*.pdf
+!uploads/**/*.pdf
+*.jsonl
 
 # Python artifacts
 __pycache__/
