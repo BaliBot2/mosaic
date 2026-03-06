@@ -1,0 +1,27 @@
+# Environment variables (Sensitive)
+.env
+
+# Data folders (Large/Local content)
+data/
+uploads/
+
+# Python artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database files
+submissions.json
+scored_candidates.json
+assessments.json
+extracted_pdf_texts.json
+final_parsed_jds.json
+
+# VS Code / IDE
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
