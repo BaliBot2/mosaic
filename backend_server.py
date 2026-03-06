@@ -13,7 +13,15 @@ app = Flask(__name__)
 CORS(app)
 
 # Setup Gemini Client
-client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+api_key = os.environ.get("GEMINI_API_KEY")
+if not api_key:
+    print("WARNING: GEMINI_API_KEY environment variable is missing or empty!")
+else:
+    # Print partially masked key for confirmation
+    masked_key = api_key[:4] + "***" + api_key[-4:] if len(api_key) > 8 else "***"
+    print(f"INFO: Successfully loaded GEMINI_API_KEY ({masked_key})")
+
+client = genai.Client(api_key=api_key)
 
 # --- Pydantic Models ---
 class QuestionScore(BaseModel):
