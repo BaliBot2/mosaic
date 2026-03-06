@@ -6,6 +6,6 @@ services:
     startCommand: gunicorn backend_server:app
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10.0
+        value: "3.11.8"
       - key: GEMINI_API_KEY
         sync: false # You must set this manually in the Render Dashboard
